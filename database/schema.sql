@@ -1,46 +1,111 @@
 -- =====================================================================
--- Examen Práctico Integrador — Programación III
--- Script de base de datos de la pareja
+-- Examen 1 Programación III — Caso 5: Gestión de biblioteca
+-- Script preliminar (Etapa 1). Motor: MySQL 8.x, InnoDB, utf8mb4.
 --
--- Etapa 1: versión preliminar (base de datos y tablas).
--- Etapa 2: versión definitiva (tablas, restricciones y datos de prueba).
---
--- Ejecutar:  mysql -u root -p < database/schema.sql
--- El nombre de la base de datos debe coincidir con db.url en db.properties.
+-- Nota: en el servidor del curso la base ya existe y el usuario no tiene
+-- permiso de CREATE DATABASE. En ese caso, comente las dos primeras
+-- sentencias y ejecute el resto directamente sobre la base asignada.
 -- =====================================================================
 
-DROP DATABASE IF EXISTS examen_progra3;
-CREATE DATABASE examen_progra3
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_spanish_ci;
+CREATE DATABASE IF NOT EXISTS gamabasis_p3ex1
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE gamabasis_p3ex1;
 
-USE examen_progra3;
-
--- ---------------------------------------------------------------------
--- Tablas
--- Cree primero las tablas sin llaves foráneas y luego las que dependen
--- de ellas. Use PRIMARY KEY, FOREIGN KEY, NOT NULL, UNIQUE y CHECK.
--- ---------------------------------------------------------------------
-
--- Ejemplo de formato (reemplácelo por las tablas de su caso):
---
--- CREATE TABLE equipo (
---     codigo      VARCHAR(10)  PRIMARY KEY,
---     descripcion VARCHAR(100) NOT NULL,
---     estado      VARCHAR(20)  NOT NULL DEFAULT 'DISPONIBLE'
--- );
---
--- CREATE TABLE prestamo (
---     id              INT AUTO_INCREMENT PRIMARY KEY,
---     equipo_codigo   VARCHAR(10) NOT NULL,
---     fecha_prestamo  DATE        NOT NULL,
---     CONSTRAINT fk_prestamo_equipo FOREIGN KEY (equipo_codigo)
---         REFERENCES equipo (codigo)
--- );
-
+-- Orden inverso de dependencias para poder re-ejecutar el script
+DROP TABLE IF EXISTS prestamo;
+DROP TABLE IF EXISTS ejemplar;
+DROP TABLE IF EXISTS libro;
+DROP TABLE IF EXISTS usuario;
 
 -- ---------------------------------------------------------------------
--- Datos de prueba (Etapa 2)
+-- usuario: lector registrado
 -- ---------------------------------------------------------------------
+CREATE TABLE usuario (
+    identificacion  VARCHAR(20)   NOT NULL,
+    nombre          VARCHAR(100)  NOT NULL,
+    correo          VARCHAR(120)  NOT NULL,
+    activo          BOOLEAN       NOT NULL DEFAULT TRUE,
+    CONSTRAINT pk_usuario PRIMARY KEY (identificacion),
+    CONSTRAINT uq_usuario_correo UNIQUE (correo),
+    CONSTRAINT ck_usuario_correo CHECK (correo LIKE '%_@_%._%')
+) ENGINE = InnoDB;
 
--- INSERT INTO equipo (codigo, descripcion) VALUES ('EQ-01', 'Proyector Epson');
+-- ---------------------------------------------------------------------
+-- libro: título del catálogo
+-- ---------------------------------------------------------------------
+CREATE TABLE libro (
+    isbn    VARCHAR(17)   NOT NULL,
+    titulo  VARCHAR(200)  NOT NULL,
+    autor   VARCHAR(120)  NOT NULL,
+    anio    SMALLINT      NOT NULL,
+    CONSTRAINT pk_libro PRIMARY KEY (isbn),
+    CONSTRAINT ck_libro_anio CHECK (anio BETWEEN 1450 AND 2100)
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- ejemplar: copia física de un libro
+-- ---------------------------------------------------------------------
+CREATE TABLE ejemplar (
+    codigo      VARCHAR(20)  NOT NULL,
+    libro_isbn  VARCHAR(17)  NOT NULL,
+    estado      ENUM('DISPONIBLE', 'PRESTADO', 'DANADO') NOT NULL DEFAULT 'DISPONIBLE',
+    CONSTRAINT pk_ejemplar PRIMARY KEY (codigo),
+    CONSTRAINT fk_ejemplar_libro FOREIGN KEY (libro_isbn)
+        REFERENCES libro (isbn)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE = InnoDB;
+
+CREATE INDEX ix_ejemplar_libro_estado ON ejemplar (libro_isbn, estado);
+
+-- ---------------------------------------------------------------------
+-- prestamo: registro de la operación entre usuario y ejemplar
+-- "Atrasado" no se guarda: estado = 'ACTIVO' AND fecha_limite < CURDATE()
+-- ---------------------------------------------------------------------
+CREATE TABLE prestamo (
+    id                INT          NOT NULL AUTO_INCREMENT,
+    usuario_id        VARCHAR(20)  NOT NULL,
+    ejemplar_codigo   VARCHAR(20)  NOT NULL,
+    fecha_prestamo    DATE         NOT NULL,
+    fecha_limite      DATE         NOT NULL,
+    fecha_devolucion  DATE         NULL,
+    estado            ENUM('ACTIVO', 'DEVUELTO') NOT NULL DEFAULT 'ACTIVO',
+    CONSTRAINT pk_prestamo PRIMARY KEY (id),
+    CONSTRAINT fk_prestamo_usuario FOREIGN KEY (usuario_id)
+        REFERENCES usuario (identificacion)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_prestamo_ejemplar FOREIGN KEY (ejemplar_codigo)
+        REFERENCES ejemplar (codigo)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT ck_prestamo_limite CHECK (fecha_limite >= fecha_prestamo),
+    CONSTRAINT ck_prestamo_devolucion CHECK (
+        fecha_devolucion IS NULL OR fecha_devolucion >= fecha_prestamo
+    ),
+    -- Coherencia estado/fecha: ACTIVO sin devolución, DEVUELTO con devolución
+    CONSTRAINT ck_prestamo_estado CHECK (
+        (estado = 'ACTIVO'   AND fecha_devolucion IS NULL) OR
+        (estado = 'DEVUELTO' AND fecha_devolucion IS NOT NULL)
+    )
+) ENGINE = InnoDB;
+
+CREATE INDEX ix_prestamo_usuario_estado ON prestamo (usuario_id, estado);
+CREATE INDEX ix_prestamo_estado_limite  ON prestamo (estado, fecha_limite);
+
+-- ---------------------------------------------------------------------
+-- Datos de prueba
+-- ---------------------------------------------------------------------
+INSERT INTO usuario (identificacion, nombre, correo, activo) VALUES
+    ('101110111', 'Ana Mora Solís',      'ana.mora@correo.com',    TRUE),
+    ('202220222', 'Luis Vargas Rojas',   'luis.vargas@correo.com', TRUE),
+    ('303330333', 'Carla Quesada Arias', 'carla.q@correo.com',     FALSE);
+
+INSERT INTO libro (isbn, titulo, autor, anio) VALUES
+    ('978-9968-12-001-1', 'Cuentos de mi tía Panchita', 'Carmen Lyra',        1920),
+    ('978-9968-12-002-8', 'Mamita Yunai',               'Carlos Luis Fallas', 1941),
+    ('978-0-13-468599-1', 'Effective Java',             'Joshua Bloch',       2018);
+
+INSERT INTO ejemplar (codigo, libro_isbn, estado) VALUES
+    ('EJ-001', '978-9968-12-001-1', 'DISPONIBLE'),
+    ('EJ-002', '978-9968-12-001-1', 'DISPONIBLE'),
+    ('EJ-003', '978-9968-12-002-8', 'DISPONIBLE'),
+    ('EJ-004', '978-0-13-468599-1', 'DISPONIBLE'),
+    ('EJ-005', '978-0-13-468599-1', 'DANADO');
