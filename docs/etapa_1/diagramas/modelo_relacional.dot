@@ -1,0 +1,48 @@
+digraph MR {
+  graph [rankdir=LR, fontname="Helvetica", nodesep=0.8, ranksep=1.3,
+         label="Caso 5 — Gestión de biblioteca: modelo relacional (MySQL, InnoDB)", labelloc=t, fontsize=16];
+  node [shape=plain, fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=9, arrowhead=crow, arrowtail=teetee, dir=both];
+
+  usuario [label=<<table border="1" cellborder="1" cellspacing="0" cellpadding="4">
+    <tr><td colspan="3" bgcolor="#5078C8"><font color="white"><b>usuario</b></font></td></tr>
+    <tr><td bgcolor="#FFF2B3"><b>PK</b></td><td align="left"><b>identificacion</b></td><td port="pk" align="left">VARCHAR(20) NOT NULL</td></tr>
+    <tr><td></td><td align="left">nombre</td><td align="left">VARCHAR(100) NOT NULL</td></tr>
+    <tr><td bgcolor="#E0F0E0">UQ</td><td align="left">correo</td><td align="left">VARCHAR(120) NOT NULL</td></tr>
+    <tr><td></td><td align="left">activo</td><td align="left">BOOLEAN NOT NULL DEFAULT TRUE</td></tr>
+    <tr><td colspan="3" align="left" bgcolor="#F4F4F4"><font point-size="9">UNIQUE (correo)<br align="left"/>CHECK (correo LIKE '%_@_%._%')<br align="left"/></font></td></tr>
+  </table>>];
+
+  libro [label=<<table border="1" cellborder="1" cellspacing="0" cellpadding="4">
+    <tr><td colspan="3" bgcolor="#5078C8"><font color="white"><b>libro</b></font></td></tr>
+    <tr><td bgcolor="#FFF2B3"><b>PK</b></td><td align="left"><b>isbn</b></td><td port="pk" align="left">VARCHAR(17) NOT NULL</td></tr>
+    <tr><td></td><td align="left">titulo</td><td align="left">VARCHAR(200) NOT NULL</td></tr>
+    <tr><td></td><td align="left">autor</td><td align="left">VARCHAR(120) NOT NULL</td></tr>
+    <tr><td></td><td align="left">anio</td><td align="left">SMALLINT NOT NULL</td></tr>
+    <tr><td colspan="3" align="left" bgcolor="#F4F4F4"><font point-size="9">CHECK (anio BETWEEN 1450 AND 2100)<br align="left"/></font></td></tr>
+  </table>>];
+
+  ejemplar [label=<<table border="1" cellborder="1" cellspacing="0" cellpadding="4">
+    <tr><td colspan="3" bgcolor="#5078C8"><font color="white"><b>ejemplar</b></font></td></tr>
+    <tr><td bgcolor="#FFF2B3"><b>PK</b></td><td align="left"><b>codigo</b></td><td port="pk" align="left">VARCHAR(20) NOT NULL</td></tr>
+    <tr><td port="fk" bgcolor="#FAD9D9"><b>FK</b></td><td align="left">libro_isbn</td><td align="left">VARCHAR(17) NOT NULL</td></tr>
+    <tr><td></td><td align="left">estado</td><td align="left">ENUM('DISPONIBLE','PRESTADO','DANADO')<br/>NOT NULL DEFAULT 'DISPONIBLE'</td></tr>
+    <tr><td colspan="3" align="left" bgcolor="#F4F4F4"><font point-size="9">FK libro_isbn → libro(isbn) ON DELETE RESTRICT<br align="left"/>INDEX (libro_isbn, estado)<br align="left"/></font></td></tr>
+  </table>>];
+
+  prestamo [label=<<table border="1" cellborder="1" cellspacing="0" cellpadding="4">
+    <tr><td colspan="3" bgcolor="#5078C8"><font color="white"><b>prestamo</b></font></td></tr>
+    <tr><td bgcolor="#FFF2B3"><b>PK</b></td><td align="left"><b>id</b></td><td align="left">INT NOT NULL AUTO_INCREMENT</td></tr>
+    <tr><td port="fku" bgcolor="#FAD9D9"><b>FK</b></td><td align="left">usuario_id</td><td align="left">VARCHAR(20) NOT NULL</td></tr>
+    <tr><td port="fke" bgcolor="#FAD9D9"><b>FK</b></td><td align="left">ejemplar_codigo</td><td align="left">VARCHAR(20) NOT NULL</td></tr>
+    <tr><td></td><td align="left">fecha_prestamo</td><td align="left">DATE NOT NULL</td></tr>
+    <tr><td></td><td align="left">fecha_limite</td><td align="left">DATE NOT NULL</td></tr>
+    <tr><td></td><td align="left">fecha_devolucion</td><td align="left">DATE NULL</td></tr>
+    <tr><td></td><td align="left">estado</td><td align="left">ENUM('ACTIVO','DEVUELTO')<br/>NOT NULL DEFAULT 'ACTIVO'</td></tr>
+    <tr><td colspan="3" align="left" bgcolor="#F4F4F4"><font point-size="9">FK usuario_id → usuario(identificacion) ON DELETE RESTRICT<br align="left"/>FK ejemplar_codigo → ejemplar(codigo) ON DELETE RESTRICT<br align="left"/>CHECK (fecha_limite &gt;= fecha_prestamo)<br align="left"/>CHECK (fecha_devolucion IS NULL OR fecha_devolucion &gt;= fecha_prestamo)<br align="left"/>CHECK ((estado='ACTIVO' AND fecha_devolucion IS NULL) OR<br align="left"/>       (estado='DEVUELTO' AND fecha_devolucion IS NOT NULL))<br align="left"/>INDEX (usuario_id, estado), INDEX (estado, fecha_limite)<br align="left"/></font></td></tr>
+  </table>>];
+
+  libro:pk:e -> ejemplar:fk:w [label="1 : N"];
+  usuario:pk:e -> prestamo:fku:w [label="1 : N"];
+  ejemplar:pk:e -> prestamo:fke:w [label="1 : N"];
+}
