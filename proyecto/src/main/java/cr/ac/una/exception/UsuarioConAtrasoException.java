@@ -1,7 +1,7 @@
 package cr.ac.una.exception;
 
 /**
- * El usuario tiene préstamos atrasados.
+ * RN-02: El usuario tiene préstamos atrasados.
  */
 
 public class UsuarioConAtrasoException extends ReglaNegocioException {

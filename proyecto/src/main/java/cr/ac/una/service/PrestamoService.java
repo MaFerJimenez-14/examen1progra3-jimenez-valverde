@@ -45,7 +45,7 @@ public class PrestamoService {
                 PoliticaPrestamo.POR_DEFECTO, Clock.systemDefaultZone());
     }
 
-    /* Registrar préstamo.
+    /* RF-07: Registrar préstamo.
      * 1. Usuario existe y está activo            -> UsuarioInactivoException
      * 2. Usuario sin préstamos atrasados         -> UsuarioConAtrasoException
      * 3. Usuario con menos de max préstamos      -> LimitePrestamosException
@@ -58,7 +58,7 @@ public class PrestamoService {
         throw new UnsupportedOperationException("Pendiente Etapa 2");
     }
 
-    /* Registrar devolución.
+    /* RF-08: Registrar devolución.
      * 1. Préstamo existe y está ACTIVO           -> PrestamoNoActivoException (RN-04)
      * 2. Transacción: UPDATE prestamo (fecha_devolucion = hoy, DEVUELTO)
      *    + UPDATE ejemplar PRESTADO -> DISPONIBLE.
@@ -69,12 +69,12 @@ public class PrestamoService {
         throw new UnsupportedOperationException("Pendiente Etapa 2");
     }
 
-    /* Préstamos activos de un usuario (JOIN con libro). */
+    /* RF-09: Préstamos activos de un usuario (JOIN con libro). */
     public List<Prestamo> listarActivosPorUsuario(String identificacionUsuario) {
         throw new UnsupportedOperationException("Pendiente Etapa 2");
     }
 
-    /* Reporte de préstamos atrasados (JOIN con usuario y libro). */
+    /* RF-10: Reporte de préstamos atrasados (JOIN con usuario y libro). */
     public List<Prestamo> listarAtrasados() {
         throw new UnsupportedOperationException("Pendiente Etapa 2");
     }

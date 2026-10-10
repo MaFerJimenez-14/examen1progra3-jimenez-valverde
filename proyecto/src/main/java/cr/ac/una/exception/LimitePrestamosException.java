@@ -1,7 +1,7 @@
 package cr.ac.una.exception;
 
 /**
- * El usuario ya alcanzó el máximo de préstamos activos.
+ * RN-03: El usuario ya alcanzó el máximo de préstamos activos.
  */
 
 public class LimitePrestamosException extends ReglaNegocioException {

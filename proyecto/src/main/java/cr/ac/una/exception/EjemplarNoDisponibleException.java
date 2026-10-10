@@ -1,7 +1,7 @@
 package cr.ac.una.exception;
 
 /**
- * El ejemplar no está DISPONIBLE.
+ * RN-01: El ejemplar no está DISPONIBLE.
  */
 
 public class EjemplarNoDisponibleException extends ReglaNegocioException {
