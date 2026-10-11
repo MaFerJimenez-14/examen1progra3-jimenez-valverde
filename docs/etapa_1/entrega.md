@@ -35,7 +35,7 @@ El sistema será utilizado por el bibliotecario o la bibliotecaria mediante una 
 ## 9.3 Requerimientos funcionales
 
 | ID | Requerimiento funcional |
-|:---|:---|
+|:-----------------------------------|:-----------------------------------|
 | RF-01 | El sistema permitirá registrar usuarios con identificación, nombre y correo. Todo usuario nuevo quedará activo. |
 | RF-02 | El sistema permitirá consultar un usuario por su identificación y listar todos los usuarios registrados. |
 | RF-03 | El sistema permitirá actualizar el nombre, el correo y el estado de un usuario (activo o inactivo). |
@@ -50,7 +50,7 @@ El sistema será utilizado por el bibliotecario o la bibliotecaria mediante una 
 ## 9.4 Reglas de negocio
 
 | ID | Regla | Operación donde se aplica | Qué ocurre si se viola |
-|:---|:---|:---|:---|
+|:-----------------|:-----------------|:-----------------|:------------------|
 | RN-01 | No se puede prestar un ejemplar cuyo estado no sea `DISPONIBLE`. | Registrar préstamo (RF-07). | Se rechaza mediante `EjemplarNoDisponibleException`; no deben conservarse cambios parciales. |
 | RN-02 | Un usuario con préstamos atrasados no puede solicitar nuevos préstamos. Se considera atrasado un préstamo `ACTIVO` cuya fecha límite ya pasó. | Registrar préstamo (RF-07). | Se rechaza mediante `UsuarioConAtrasoException`. |
 | RN-03 | Un usuario no puede tener más de tres préstamos `ACTIVOS` al mismo tiempo. | Registrar préstamo (RF-07). | Se rechaza mediante `LimitePrestamosException`. |
@@ -74,7 +74,7 @@ El sistema será utilizado por el bibliotecario o la bibliotecaria mediante una 
 ### Entidades
 
 | Clase | Responsabilidad | Atributos principales |
-|:---|:---|:---|
+|:-----------------------|:-----------------------|:-----------------------|
 | `Usuario` | Representa a un lector registrado e indica si puede solicitar préstamos. | `identificacion`, `nombre`, `correo`, `activo` |
 | `Libro` | Representa un título del catálogo, independientemente de la cantidad de copias físicas. | `isbn`, `titulo`, `autor`, `anio` |
 | `Ejemplar` | Representa una copia física de un libro y su estado actual. | `codigo`, `libro`, `estado` |
@@ -83,7 +83,7 @@ El sistema será utilizado por el bibliotecario o la bibliotecaria mediante una 
 ### Relaciones
 
 | Clases relacionadas | Tipo de relación | Multiplicidad | Explicación |
-|:---|:---|:---|:---|
+|:-----------------|:-----------------|:-----------------|:-----------------|
 | `Libro` --- `Ejemplar` | Asociación | Un `Libro` con `0..*` `Ejemplar`; cada `Ejemplar` corresponde a `1` `Libro`. | Un título puede tener varios ejemplares físicos. |
 | `Usuario` --- `Prestamo` | Asociación | Un `Usuario` con `0..*` `Prestamo`; cada `Prestamo` corresponde a `1` `Usuario`. | Un usuario puede tener un historial de préstamos y hasta tres préstamos activos simultáneamente. |
 | `Ejemplar` --- `Prestamo` | Asociación | Un `Ejemplar` con `0..*` `Prestamo` a lo largo del tiempo; cada `Prestamo` corresponde a `1` `Ejemplar`. | Un ejemplar puede prestarse varias veces, pero no debe tener más de un préstamo activo simultáneamente. |
@@ -143,7 +143,7 @@ El modelo relacional representa las tablas, sus claves primarias y foráneas y l
 El paquete base del proyecto es `cr.ac.una`. La aplicación separa las responsabilidades en capas: `app` presenta el menú de consola, `controller` coordina las solicitudes, `service` aplica las validaciones y reglas de negocio, y `repository` define el acceso a los datos. `model` representa las entidades y enumeraciones; `config` proporciona conexiones y `exception` define los errores de la aplicación.
 
 | Capa | Clases | Responsabilidad |
-|:---|:---|:---|
+|:---------------------|:---------------------------|:---------------------|
 | `app` | `App`, `Consola` | Mostrar el menú, capturar entradas y presentar resultados. No accede directamente a repositorios ni ejecuta SQL. |
 | `model` | `Usuario`, `Libro`, `Ejemplar`, `Prestamo`, `EstadoEjemplar`, `EstadoPrestamo` | Representar los datos del dominio. No utiliza JDBC ni lee datos de la consola. |
 | `repository` | Interfaces `UsuarioRepository`, `LibroRepository`, `EjemplarRepository`, `PrestamoRepository` | Definir las operaciones de persistencia. En la Etapa 2 se implementarán las clases JDBC que ejecutarán las consultas SQL y convertirán los resultados de la base de datos en objetos del modelo. Esta capa no contiene reglas de negocio. |
@@ -208,6 +208,6 @@ Marca cada punto como completado únicamente después de verificarlo en el proye
 ## Distribución del trabajo
 
 | Integrante | Aportes principales |
-|----|----|
+|------------------------------------|------------------------------------|
 | Maria Jimenez Alpizar | Creación y configuración del repositorio GitHub, elaboración de `database/schema.sql`, diseño del modelo relacional, desarrollo del paquete `model` (entidades y enumeraciones) y definición de las interfaces del paquete `repository`. |
 | Mishia Valverde Narváez | Desarrollo del paquete `exception`, configuración de `config/ProveedorConexion`, desarrollo de los paquetes `service` y `controller`, elaboración del diagrama UML y documentación de la Etapa 1 en `docs/etapa_1/entrega.md`. |
