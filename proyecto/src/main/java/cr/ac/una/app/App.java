@@ -17,6 +17,14 @@ import java.sql.SQLException;
 public class App {
 
     public static void main(String[] args) {
+        
+        // Configura la salida de la consola en UTF-8 para mostrar correctamente
+        // caracteres especiales, como tildes y la letra ñ.
+        System.setOut(new java.io.PrintStream(
+            System.out, true, java.nio.charset.StandardCharsets.UTF_8));
+        System.setErr(new java.io.PrintStream(
+            System.err, true, java.nio.charset.StandardCharsets.UTF_8));
+
         int opcion;
         do {
             Consola.titulo("Examen Práctico Integrador - Programación III");

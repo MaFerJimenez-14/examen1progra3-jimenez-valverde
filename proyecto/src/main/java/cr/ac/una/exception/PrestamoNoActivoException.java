@@ -4,9 +4,9 @@ package cr.ac.una.exception;
  * RN-04: Solo se puede devolver un préstamo ACTIVO.
  */
 
-public class PrestamoActivoException extends ReglaNegocioException{
+public class PrestamoNoActivoException extends ReglaNegocioException{
     
-    public PrestamoActivoException(String mensaje){
+    public PrestamoNoActivoException(String mensaje){
         super(mensaje);
     }
     

@@ -1,0 +1,226 @@
+digraph UML {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=12, nodesep=0.45, ranksep=0.7, compound=true, newrank=true,
+         label="Caso 5 — Gestión de biblioteca: diagrama de clases por capas", labelloc=t, fontsize=16];
+  node  [shape=plain, fontname="Helvetica", fontsize=10];
+  edge  [fontname="Helvetica", fontsize=9];
+
+  // ---------- helpers: HTML class boxes ----------
+  subgraph cluster_controller {
+    label="controller"; style="rounded,filled"; fillcolor="#FFF4E0"; color="#E0A040";
+    UsuarioController [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>UsuarioController</b></td></tr><hr/>
+      <tr><td align="left">- usuarioService: UsuarioService</td></tr><hr/>
+      <tr><td align="left">+ registrar(id, nombre, correo): String</td></tr>
+      <tr><td align="left">+ buscar(id): String</td></tr>
+      <tr><td align="left">+ listar(): List&lt;Usuario&gt;</td></tr>
+      <tr><td align="left">+ actualizar(id, nombre, correo, activo): String</td></tr></table>>];
+    CatalogoController [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>CatalogoController</b></td></tr><hr/>
+      <tr><td align="left">- catalogoService: CatalogoService</td></tr><hr/>
+      <tr><td align="left">+ registrarLibro(isbn, titulo, autor, anio): String</td></tr>
+      <tr><td align="left">+ buscarLibro(isbn): String</td></tr>
+      <tr><td align="left">+ listarLibros(): List&lt;Libro&gt;</td></tr>
+      <tr><td align="left">+ registrarEjemplar(codigo, isbn): String</td></tr>
+      <tr><td align="left">+ listarEjemplares(isbn): List&lt;Ejemplar&gt;</td></tr>
+      <tr><td align="left">+ consultarDisponibilidad(isbn): String</td></tr>
+      <tr><td align="left">+ cambiarEstadoEjemplar(codigo, estado): String</td></tr></table>>];
+    PrestamoController [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>PrestamoController</b></td></tr><hr/>
+      <tr><td align="left">- prestamoService: PrestamoService</td></tr><hr/>
+      <tr><td align="left">+ prestar(idUsuario, codigoEjemplar): String</td></tr>
+      <tr><td align="left">+ devolver(idPrestamo): String</td></tr>
+      <tr><td align="left">+ listarActivosPorUsuario(idUsuario): List&lt;Prestamo&gt;</td></tr>
+      <tr><td align="left">+ reporteAtrasados(): List&lt;Prestamo&gt;</td></tr></table>>];
+  }
+
+  subgraph cluster_service {
+    label="service"; style="rounded,filled"; fillcolor="#E8F4E8"; color="#5AA05A";
+    UsuarioService [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>UsuarioService</b></td></tr><hr/>
+      <tr><td align="left">- usuarioRepository: UsuarioRepository</td></tr><hr/>
+      <tr><td align="left">+ registrar(u: Usuario): void</td></tr>
+      <tr><td align="left">+ buscarPorId(id): Usuario</td></tr>
+      <tr><td align="left">+ listar(): List&lt;Usuario&gt;</td></tr>
+      <tr><td align="left">+ actualizar(u: Usuario): void</td></tr></table>>];
+    CatalogoService [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>CatalogoService</b></td></tr><hr/>
+      <tr><td align="left">- libroRepository: LibroRepository</td></tr>
+      <tr><td align="left">- ejemplarRepository: EjemplarRepository</td></tr><hr/>
+      <tr><td align="left">+ registrarLibro(l: Libro): void</td></tr>
+      <tr><td align="left">+ buscarLibro(isbn): Libro</td></tr>
+      <tr><td align="left">+ listarLibros(): List&lt;Libro&gt;</td></tr>
+      <tr><td align="left">+ registrarEjemplar(codigo, isbn): void</td></tr>
+      <tr><td align="left">+ listarEjemplares(isbn): List&lt;Ejemplar&gt;</td></tr>
+      <tr><td align="left">+ consultarDisponibilidad(isbn): int</td></tr>
+      <tr><td align="left">+ cambiarEstadoEjemplar(codigo, estado): void</td></tr></table>>];
+    PrestamoService [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>PrestamoService</b></td></tr><hr/>
+      <tr><td align="left">- usuarioRepository: UsuarioRepository</td></tr>
+      <tr><td align="left">- ejemplarRepository: EjemplarRepository</td></tr>
+      <tr><td align="left">- prestamoRepository: PrestamoRepository</td></tr>
+      <tr><td align="left">- proveedorConexion: ProveedorConexion</td></tr>
+      <tr><td align="left">- politica: PoliticaPrestamo</td></tr>
+      <tr><td align="left">- reloj: Clock</td></tr><hr/>
+      <tr><td align="left">+ prestar(idUsuario, codigoEjemplar): Prestamo</td></tr>
+      <tr><td align="left">+ devolver(idPrestamo): Prestamo</td></tr>
+      <tr><td align="left">+ listarActivosPorUsuario(idUsuario): List&lt;Prestamo&gt;</td></tr>
+      <tr><td align="left">+ listarAtrasados(): List&lt;Prestamo&gt;</td></tr></table>>];
+    PoliticaPrestamo [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«record»</i></td></tr><tr><td><b>PoliticaPrestamo</b></td></tr><hr/>
+      <tr><td align="left">+ diasPrestamo: int = 8</td></tr>
+      <tr><td align="left">+ maxPrestamosActivos: int = 3</td></tr></table>>];
+  }
+
+  subgraph cluster_config {
+    label="config"; style="rounded,filled"; fillcolor="#F0F0F0"; color="#909090";
+    ProveedorConexion [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«interface»</i></td></tr><tr><td><b>ProveedorConexion</b></td></tr><hr/>
+      <tr><td align="left">+ obtenerConexion(): Connection</td></tr></table>>];
+    ConexionBD [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>ConexionBD</b></td></tr><hr/>
+      <tr><td align="left">lee db.properties</td></tr></table>>];
+  }
+
+  subgraph cluster_repository {
+    label="repository"; style="rounded,filled"; fillcolor="#E6EEFA"; color="#5078C8";
+    UsuarioRepository [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«interface»</i></td></tr><tr><td><b>UsuarioRepository</b></td></tr><hr/>
+      <tr><td align="left">+ insertar(u: Usuario): void</td></tr>
+      <tr><td align="left">+ buscarPorId(id): Optional&lt;Usuario&gt;</td></tr>
+      <tr><td align="left">+ buscarPorCorreo(correo): Optional&lt;Usuario&gt;</td></tr>
+      <tr><td align="left">+ listar(): List&lt;Usuario&gt;</td></tr>
+      <tr><td align="left">+ actualizar(u: Usuario): void</td></tr></table>>];
+    LibroRepository [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«interface»</i></td></tr><tr><td><b>LibroRepository</b></td></tr><hr/>
+      <tr><td align="left">+ insertar(l: Libro): void</td></tr>
+      <tr><td align="left">+ buscarPorIsbn(isbn): Optional&lt;Libro&gt;</td></tr>
+      <tr><td align="left">+ listar(): List&lt;Libro&gt;</td></tr>
+      <tr><td align="left">+ actualizar(l: Libro): void</td></tr></table>>];
+    EjemplarRepository [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«interface»</i></td></tr><tr><td><b>EjemplarRepository</b></td></tr><hr/>
+      <tr><td align="left">+ insertar(e: Ejemplar): void</td></tr>
+      <tr><td align="left">+ buscarPorCodigo(codigo): Optional&lt;Ejemplar&gt;</td></tr>
+      <tr><td align="left">+ listarPorLibro(isbn): List&lt;Ejemplar&gt;</td></tr>
+      <tr><td align="left">+ contarDisponibles(isbn): int</td></tr>
+      <tr><td align="left">+ actualizarEstado(codigo, nuevo): void</td></tr>
+      <tr><td align="left">+ actualizarEstado(con, codigo, esperado, nuevo): boolean</td></tr></table>>];
+    PrestamoRepository [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«interface»</i></td></tr><tr><td><b>PrestamoRepository</b></td></tr><hr/>
+      <tr><td align="left">+ insertar(con, p: Prestamo): int</td></tr>
+      <tr><td align="left">+ buscarPorId(id): Optional&lt;Prestamo&gt;</td></tr>
+      <tr><td align="left">+ registrarDevolucion(con, id, fecha): void</td></tr>
+      <tr><td align="left">+ listarActivosPorUsuario(idUsuario): List&lt;Prestamo&gt;</td></tr>
+      <tr><td align="left">+ listarAtrasados(hoy): List&lt;Prestamo&gt;</td></tr>
+      <tr><td align="left">+ contarActivosPorUsuario(idUsuario): int</td></tr>
+      <tr><td align="left">+ tieneAtrasados(idUsuario, hoy): boolean</td></tr></table>>];
+
+    UsuarioRepositoryJdbc  [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>UsuarioRepositoryJdbc</b></td></tr><hr/><tr><td align="left">- conexion: ProveedorConexion</td></tr></table>>];
+    LibroRepositoryJdbc    [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>LibroRepositoryJdbc</b></td></tr><hr/><tr><td align="left">- conexion: ProveedorConexion</td></tr></table>>];
+    EjemplarRepositoryJdbc [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>EjemplarRepositoryJdbc</b></td></tr><hr/><tr><td align="left">- conexion: ProveedorConexion</td></tr></table>>];
+    PrestamoRepositoryJdbc [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>PrestamoRepositoryJdbc</b></td></tr><hr/><tr><td align="left">- conexion: ProveedorConexion</td></tr></table>>];
+  }
+
+  subgraph cluster_model {
+    label="model"; style="rounded,filled"; fillcolor="#F6E9F6"; color="#A060A0";
+    Usuario [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>Usuario</b></td></tr><hr/>
+      <tr><td align="left">- identificacion: String</td></tr>
+      <tr><td align="left">- nombre: String</td></tr>
+      <tr><td align="left">- correo: String</td></tr>
+      <tr><td align="left">- activo: boolean</td></tr></table>>];
+    Libro [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>Libro</b></td></tr><hr/>
+      <tr><td align="left">- isbn: String</td></tr>
+      <tr><td align="left">- titulo: String</td></tr>
+      <tr><td align="left">- autor: String</td></tr>
+      <tr><td align="left">- anio: int</td></tr></table>>];
+    Ejemplar [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>Ejemplar</b></td></tr><hr/>
+      <tr><td align="left">- codigo: String</td></tr>
+      <tr><td align="left">- libro: Libro</td></tr>
+      <tr><td align="left">- estado: EstadoEjemplar</td></tr><hr/>
+      <tr><td align="left">+ estaDisponible(): boolean</td></tr></table>>];
+    Prestamo [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><b>Prestamo</b></td></tr><hr/>
+      <tr><td align="left">- id: int</td></tr>
+      <tr><td align="left">- usuario: Usuario</td></tr>
+      <tr><td align="left">- ejemplar: Ejemplar</td></tr>
+      <tr><td align="left">- fechaPrestamo: LocalDate</td></tr>
+      <tr><td align="left">- fechaLimite: LocalDate</td></tr>
+      <tr><td align="left">- fechaDevolucion: LocalDate [0..1]</td></tr>
+      <tr><td align="left">- estado: EstadoPrestamo</td></tr><hr/>
+      <tr><td align="left">+ estaAtrasado(hoy): boolean</td></tr>
+      <tr><td align="left">+ diasAtraso(fecha): long</td></tr></table>>];
+    EstadoEjemplar [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«enumeration»</i></td></tr><tr><td><b>EstadoEjemplar</b></td></tr><hr/>
+      <tr><td align="left">DISPONIBLE</td></tr><tr><td align="left">PRESTADO</td></tr><tr><td align="left">DANADO</td></tr></table>>];
+    EstadoPrestamo [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white">
+      <tr><td><i>«enumeration»</i></td></tr><tr><td><b>EstadoPrestamo</b></td></tr><hr/>
+      <tr><td align="left">ACTIVO</td></tr><tr><td align="left">DEVUELTO</td></tr></table>>];
+  }
+
+  subgraph cluster_exception {
+    label="exception"; style="rounded,filled"; fillcolor="#FCE8E8"; color="#C85050";
+    BibliotecaException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>BibliotecaException</b></td></tr><tr><td><font point-size="8">extends RuntimeException</font></td></tr></table>>];
+    ValidacionException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>ValidacionException</b></td></tr></table>>];
+    EntidadNoEncontradaException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>EntidadNoEncontradaException</b></td></tr></table>>];
+    DatosException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>DatosException</b></td></tr></table>>];
+    ReglaNegocioException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>ReglaNegocioException</b></td></tr></table>>];
+    EjemplarNoDisponibleException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>EjemplarNoDisponibleException</b></td></tr><tr><td><font point-size="8">RN-01</font></td></tr></table>>];
+    UsuarioConAtrasoException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>UsuarioConAtrasoException</b></td></tr><tr><td><font point-size="8">RN-02</font></td></tr></table>>];
+    LimitePrestamosException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>LimitePrestamosException</b></td></tr><tr><td><font point-size="8">RN-03</font></td></tr></table>>];
+    PrestamoNoActivoException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>PrestamoNoActivoException</b></td></tr><tr><td><font point-size="8">RN-04</font></td></tr></table>>];
+    UsuarioInactivoException [label=<<table border="1" cellborder="0" cellspacing="0" bgcolor="white"><tr><td><b>UsuarioInactivoException</b></td></tr><tr><td><font point-size="8">RN-05</font></td></tr></table>>];
+  }
+
+  // ---------- controller -> service (dependencia/composición) ----------
+  edge [arrowhead=vee, style=solid];
+  UsuarioController -> UsuarioService  [label="1"];
+  CatalogoController -> CatalogoService [label="1"];
+  PrestamoController -> PrestamoService [label="1"];
+
+  // ---------- service -> repository interfaces ----------
+  UsuarioService  -> UsuarioRepository;
+  CatalogoService -> LibroRepository;
+  CatalogoService -> EjemplarRepository;
+  PrestamoService -> UsuarioRepository;
+  PrestamoService -> EjemplarRepository;
+  PrestamoService -> PrestamoRepository;
+  PrestamoService -> PoliticaPrestamo;
+  PrestamoService -> ProveedorConexion [style=dashed, label="«usa»"];
+
+  // ---------- realizaciones ----------
+  edge [arrowhead=empty, style=dashed];
+  UsuarioRepositoryJdbc  -> UsuarioRepository;
+  LibroRepositoryJdbc    -> LibroRepository;
+  EjemplarRepositoryJdbc -> EjemplarRepository;
+  PrestamoRepositoryJdbc -> PrestamoRepository;
+  ConexionBD -> ProveedorConexion [label="«método ref.»"];
+
+  // ---------- model associations ----------
+  edge [arrowhead=vee, style=solid, dir=forward];
+  Prestamo -> Usuario  [headlabel="1", taillabel="0..*"];
+  Prestamo -> Ejemplar [headlabel="1", taillabel="0..*"];
+  Ejemplar -> Libro    [headlabel="1", taillabel="0..*"];
+  Ejemplar -> EstadoEjemplar [style=dashed];
+  Prestamo -> EstadoPrestamo [style=dashed];
+
+  // ---------- repository -> model (dependencia) ----------
+  edge [arrowhead=vee, style=dashed, color="#888888"];
+  PrestamoRepository -> Prestamo [lhead=cluster_model, label="«usa»"];
+
+  // ---------- herencia de excepciones ----------
+  edge [arrowhead=empty, style=solid, color=black];
+  ValidacionException -> BibliotecaException;
+  EntidadNoEncontradaException -> BibliotecaException;
+  DatosException -> BibliotecaException;
+  ReglaNegocioException -> BibliotecaException;
+  EjemplarNoDisponibleException -> ReglaNegocioException;
+  UsuarioConAtrasoException -> ReglaNegocioException;
+  LimitePrestamosException -> ReglaNegocioException;
+  PrestamoNoActivoException -> ReglaNegocioException;
+  UsuarioInactivoException -> ReglaNegocioException;
+
+  edge [arrowhead=vee, style=dashed, color="#C85050"];
+  PrestamoService -> ReglaNegocioException [label="«lanza»", lhead=cluster_exception];
+}
