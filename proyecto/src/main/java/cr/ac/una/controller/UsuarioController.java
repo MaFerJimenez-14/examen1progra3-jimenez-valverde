@@ -67,4 +67,7 @@ public class UsuarioController {
         }
     }
     
+    public Usuario buscarDetalle(String identificacion) {
+        return usuarioService.buscarPorId(identificacion);
+    }
 }

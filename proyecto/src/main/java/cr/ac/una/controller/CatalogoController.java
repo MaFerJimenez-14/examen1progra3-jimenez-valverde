@@ -84,4 +84,12 @@ public class CatalogoController {
         }
     }
     
+    
+    public Libro buscarDetalle(String isbn) {
+        return catalogoService.buscarLibro(isbn);
+    }
+
+    public int consultarCantidadDisponible(String isbn) {
+        return catalogoService.consultarDisponibilidad(isbn);
+    }
 }
