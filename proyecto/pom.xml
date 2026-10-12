@@ -20,6 +20,7 @@
     </properties>
 
     <dependencies>
+        
         <!-- Controlador JDBC de MySQL -->
         <dependency>
             <groupId>com.mysql</groupId>
@@ -34,6 +35,15 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        
+        <!-- Simulación de dependencias para pruebas unitarias -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.18.0</version>
+            <scope>test</scope>
+        </dependency>
+        
     </dependencies>
 
     <build>

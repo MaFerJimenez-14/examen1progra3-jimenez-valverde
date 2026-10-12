@@ -1,4 +1,3 @@
-
 package cr.ac.una.repository.jdbc;
 
 import cr.ac.una.config.ConexionBD;
