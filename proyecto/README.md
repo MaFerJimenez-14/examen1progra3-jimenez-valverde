@@ -19,20 +19,24 @@ Caso 5 - Gestión de Biblioteca
 
 La biblioteca comunitaria necesita un sistema que permita administrar el catálogo de libros, sus ejemplares físicos, los usuarios registrados y los préstamos realizados.
 
-El sistema busca facilitar el control de la disponibilidad de los ejemplares, el registro de préstamos y devoluciones, y la identificación de préstamos atrasados. Además, se aplicarán reglas de negocio para evitar operaciones no permitidas y mantener la consistencia de la información.
+El sistema permite controlar la disponibilidad de los ejemplares, registrar préstamos y devoluciones, consultar préstamos atrasados y administrar multas por atraso. También aplica reglas de negocio para evitar operaciones no permitidas y mantener la consistencia de la información.
 
 La aplicación está diseñada para ser utilizada por el personal bibliotecario mediante una interfaz de consola, con persistencia de datos en MySQL.
 
 ## Funcionalidades implementadas
 
-- [ ] Registrar, consultar, listar y actualizar usuarios.
-- [ ] Registrar libros y sus ejemplares físicos.
-- [ ] Consultar libros, ejemplares y su disponibilidad.
-- [ ] Cambiar el estado de los ejemplares según las reglas establecidas.
-- [ ] Registrar préstamos y calcular sus fechas límite.
-- [ ] Registrar devoluciones y calcular los días de atraso.
-- [ ] Consultar los préstamos activos de un usuario.
-- [ ] Generar un reporte de préstamos atrasados.
+- Registrar, consultar, listar y actualizar usuarios.
+- Registrar libros y sus ejemplares físicos.
+- Consultar libros, ejemplares y su disponibilidad.
+- Cambiar el estado de los ejemplares según las reglas establecidas.
+- Registrar préstamos y calcular sus fechas límite.
+- Registrar devoluciones y calcular las multas por atraso.
+- Consultar los préstamos activos de un usuario.
+- Generar un reporte de préstamos atrasados.
+- Consultar las multas pendientes de pago agrupadas por usuario.
+- Consultar el total adeudado por cada usuario.
+- Bloquear nuevos préstamos cuando el usuario tiene multas pendientes.
+- Registrar el pago de una multa pendiente.
 
 ## Reglas de negocio implementadas
 
@@ -47,6 +51,9 @@ La aplicación está diseñada para ser utilizada por el personal bibliotecario 
 | RN-07 | La identificación y el correo de un usuario, el ISBN de un libro y el código de un ejemplar deben ser únicos. | Servicios y base de datos |
 | RN-08 | Un ejemplar en estado `PRESTADO` solo puede volver a `DISPONIBLE` mediante el proceso de devolución. | `CatalogoService` y `PrestamoService` |
 | RN-09 | Los campos obligatorios deben contener datos válidos, el correo debe tener un formato válido y el año del libro debe estar entre 1450 y 2100. | Servicios y validaciones de datos |
+| RN-N1 | Se cobra una multa de ₡200 por cada día de atraso en la devolución. Si no hay atraso, la multa es de ₡0. | `PoliticaPrestamo` y `PrestamoService` |
+| RN-N2 | Un usuario con multas pendientes de pago no puede solicitar nuevos préstamos. | `PrestamoService` |
+| RN-N3 | El sistema permite registrar el pago de una multa pendiente y actualizar su estado. | `PrestamoService` y `PrestamoRepositoryJDBC` |
 
 
 ## Arquitectura
@@ -89,6 +96,7 @@ proyecto/
     │   │       │   ├── EjemplarNoDisponibleException.java
     │   │       │   ├── EntidadNoEncontradaException.java
     │   │       │   ├── LimitePrestamosException.java
+    │   │       │   ├── MultaPendienteException.java
     │   │       │   ├── PrestamoNoActivoException.java
     │   │       │   ├── ReglaNegocioException.java
     │   │       │   ├── UsuarioConAtrasoException.java
@@ -117,7 +125,8 @@ proyecto/
     └── test/
         └── java/
             └── cr/ac/una/
-                └── EjemploPruebaTest.java
+                ├── EjemploPruebaTest.java
+                └── PrestamoServiceMultaTest
 ```
 
 ## Configuración de la base de datos
@@ -126,16 +135,28 @@ El proyecto utiliza MySQL para almacenar la información de la biblioteca. El es
 
 La conexión se configura mediante el archivo local `db.properties`, utilizado por la clase `ConexionBD`.
 
-1. Crear la base de datos utilizando el esquema SQL del proyecto.
-2. Configurar `db.properties` con los datos de conexión locales.
-3. Verificar que el servidor MySQL esté activo y que las credenciales tengan los permisos necesarios.
+1. Verificar que el servidor MySQL esté instalado y activo.
+2. Crear la base de datos utilizando el esquema SQL del proyecto.
+3. Copiar `db.properties.example` como `db.properties`.
+4. Configurar el nombre de la base de datos, el usuario y la contraseña.
+5. Verificar que las credenciales tengan los permisos necesarios.
 
+
+Desde la raíz del repositorio, ejecutar:
 
 ```bash
 mysql -u root -p < database/schema.sql
-cd proyecto/src/main/resources
-cp db.properties.example db.properties   # y edite usuario/contraseña
 ```
+
+Luego, configurar el archivo de conexión. En Windows, también se puede copiar el archivo desde el explorador de archivos o desde NetBeans.
+
+```bash
+cd proyecto/src/main/resources
+copy db.properties.example db.properties
+```
+
+Editar `db.properties` con los valores correspondientes al entorno local. No publicar contraseñas ni credenciales personales en el repositorio.
+
 
 ## Pasos para ejecutar
 
@@ -144,25 +165,44 @@ El proyecto utiliza Maven y puede abrirse y ejecutarse desde Apache NetBeans.
 1. Clonar el repositorio desde GitHub.
 2. Abrir en NetBeans la carpeta `proyecto`, donde se encuentra `pom.xml`.
 3. Verificar la configuración de conexión a MySQL.
-4. Ejecutar el proyecto desde NetBeans.
+4. Verificar que la base de datos y las tablas estén creadas.
+5. Ejecutar el proyecto desde NetBeans.
+
+También puede ejecutarse desde una terminal, siempre que Maven y JDK 21 estén correctamente configurados:
 
 ```bash
-git clone <url-del-repositorio>
-cd <repositorio>/proyecto
+git clone https://github.com/MaFerJimenez-14/examen1progra3-jimenez-valverde.git
+cd examen1progra3-jimenez-valverde/proyecto
 mvn clean compile exec:java
 ```
 
 ## Ejecutar las pruebas
 
-El proyecto contiene una clase de ejemplo, `EjemploPruebaTest`, con dos pruebas básicas de JUnit 5. Estas verifican aserciones y el manejo de excepciones, pero todavía no comprueban las reglas de negocio de la biblioteca.
+El proyecto incluye pruebas automatizadas con JUnit 5.
 
+- `PrestamoServiceMultaTest`: comprueba el cálculo de multas y el comportamiento relacionado con las devoluciones, el bloqueo de préstamos por multas pendientes y el pago de multas.
+- `EjemploPruebaTest`: contiene pruebas de ejemplo.
+
+Para ejecutar las pruebas desde la terminal:
 
 ```bash
 cd proyecto
 mvn test
 ```
 
+Las pruebas de integración manual con MySQL y sus evidencias se documentan en `docs/etapa_3/pruebas.md`.
+
+## Documentación adicional
+
+La documentación de la tercera etapa se encuentra en `docs/etapa_3/`:
+
+- `entrega.md`: integración, decisiones de diseño y distribución del trabajo.
+- `pruebas.md`: pruebas realizadas y sus evidencias.
+- `mejoras.md`: mejora de calidad implementada y defectos corregidos.
+
 ## Video de demostración
+
+**Enlace:** pendiente de agregar.
 
 <enlace al video (máximo 5 minutos, participan ambos integrantes)>
 
@@ -173,3 +213,4 @@ mvn test
 - **MySQL:** sistema de gestión de bases de datos.
 - **MySQL Connector/J:** controlador JDBC para la conexión con MySQL.
 - **JUnit 5:** framework utilizado para las pruebas de ejemplo.
+- **Apache NetBeans:** entorno de desarrollo utilizado.
