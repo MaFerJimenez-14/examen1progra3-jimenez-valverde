@@ -22,14 +22,17 @@ import cr.ac.una.service.CatalogoService;
 import cr.ac.una.service.PoliticaPrestamo;
 import cr.ac.una.service.PrestamoService;
 import cr.ac.una.service.UsuarioService;
+import java.math.BigDecimal;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 
 import java.time.Clock;
+import java.util.LinkedHashMap;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Punto de entrada de la aplicación (interfaz de consola).
@@ -503,8 +506,48 @@ private static void mostrarMenu() {
             return;
         }
 
-        mostrarTablaPrestamos(prestamos);
-        Consola.info("Total de préstamos con multas pendientes: " + prestamos.size());
+        Map<String, BigDecimal> deudas = new LinkedHashMap<>();
+        Map<String, String> nombres = new LinkedHashMap<>();
+
+        for (Prestamo p : prestamos) {
+            if (p.getUsuario() == null) {
+                continue;
+            }
+
+            String id = p.getUsuario().getIdentificacion();
+
+            nombres.put(id, p.getUsuario().getNombre());
+
+            deudas.merge(
+                    id,
+                    p.getMulta(),
+                    BigDecimal::add
+            );
+        }
+
+        String[][] filas = new String[deudas.size()][3];
+        int i = 0;
+        BigDecimal totalGeneral = BigDecimal.ZERO;
+
+        for (Map.Entry<String, BigDecimal> deuda : deudas.entrySet()) {
+            String id = deuda.getKey();
+            BigDecimal monto = deuda.getValue();
+
+            filas[i][0] = id;
+            filas[i][1] = nombres.get(id);
+            filas[i][2] = "₡" + monto.toPlainString();
+
+            totalGeneral = totalGeneral.add(monto);
+            i++;
+        }
+
+        Consola.tabla(
+                new String[]{"Identificación", "Usuario", "Total adeudado"},
+                filas,
+                new int[]{18, 28, 20}
+        );
+
+        Consola.info("Total general pendiente: ₡" + totalGeneral.toPlainString());
     }
     
     private static void pagarMulta() {
