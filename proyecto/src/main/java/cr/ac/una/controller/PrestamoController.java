@@ -73,4 +73,16 @@ public class PrestamoController {
         return prestamoService.listarAtrasados();
     }
     
+    public List<Prestamo> reporteMultasPendientes() {
+        return prestamoService.listarMultasPendientes();
+    }
+    
+    public String pagarMulta(int idPrestamo) {
+        try {
+            prestamoService.pagarMulta(idPrestamo);
+            return "Pago de multa registrado correctamente. " + "Préstamo ID: " + idPrestamo + ".";
+        } catch (BibliotecaException e) {
+            return "No se pudo registrar el pago: " + e.getMessage();
+        }
+    }
 }

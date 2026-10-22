@@ -1,28 +1,35 @@
 package cr.ac.una.service;
 
 import cr.ac.una.config.ProveedorConexion;
+
 import cr.ac.una.exception.DatosException;
 import cr.ac.una.exception.EjemplarNoDisponibleException;
 import cr.ac.una.exception.EntidadNoEncontradaException;
 import cr.ac.una.exception.LimitePrestamosException;
+import cr.ac.una.exception.MultaPendienteException;
 import cr.ac.una.exception.PrestamoNoActivoException;
 import cr.ac.una.exception.UsuarioConAtrasoException;
 import cr.ac.una.exception.UsuarioInactivoException;
 import cr.ac.una.exception.ValidacionException;
+
 import cr.ac.una.model.Ejemplar;
 import cr.ac.una.model.EstadoEjemplar;
 import cr.ac.una.model.EstadoPrestamo;
 import cr.ac.una.model.Prestamo;
 import cr.ac.una.model.Usuario;
+
 import cr.ac.una.repository.EjemplarRepository;
 import cr.ac.una.repository.PrestamoRepository;
 import cr.ac.una.repository.UsuarioRepository;
+
 import java.math.BigDecimal;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 
 import java.time.Clock;
 import java.time.LocalDate;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -90,6 +97,13 @@ public class PrestamoService {
                     + "solicitar otro préstamo.");
         }
 
+        // RN-N2: no se permiten préstamos nuevos si hay multas pendientes.
+        if (prestamoRepository.tieneMultasPendientes(identificacion)) {
+            throw new MultaPendienteException(
+                    "El usuario tiene multas pendientes de pago y no puede "
+                    + "solicitar otro préstamo.");
+        }
+        
         // RN-03: respetar el máximo de préstamos activos.
         int activos = prestamoRepository.contarActivosPorUsuario(identificacion);
 
@@ -247,6 +261,51 @@ public class PrestamoService {
     /* RF-10: Reporte de préstamos atrasados (JOIN con usuario y libro). */
     public List<Prestamo> listarAtrasados() {
         return prestamoRepository.listarAtrasados(LocalDate.now(reloj));
+    }
+    
+    /* Consulta los préstamos que tienen multas pendientes de pago */
+    public List<Prestamo> listarMultasPendientes() {
+        return prestamoRepository.listarMultasPendientes();
+    }
+    
+    /* Registra el pago de la multa de un préstamo */
+    public void pagarMulta(int idPrestamo) {
+        if (idPrestamo <= 0) {
+            throw new ValidacionException("El identificador del préstamo debe ser positivo.");
+        }
+
+        try (Connection conexion = proveedorConexion.obtenerConexion()) {
+            conexion.setAutoCommit(false);
+
+            try {
+                Prestamo prestamo = prestamoRepository.buscarPorId(idPrestamo)
+                        .orElseThrow(() -> new EntidadNoEncontradaException(
+                        "No existe el préstamo con ID: " + idPrestamo));
+
+                if (prestamo.getMulta() == null
+                        || prestamo.getMulta().compareTo(BigDecimal.ZERO) <= 0
+                        || prestamo.isMultaPagada()) {
+                    throw new ValidacionException("El préstamo no tiene una multa pendiente de pago.");
+                }
+
+                prestamoRepository.registrarPagoMulta(conexion, idPrestamo);
+                conexion.commit();
+
+                prestamo.setMultaPagada(true);
+            } 
+            catch (RuntimeException | SQLException e) {
+                rollback(conexion, e);
+
+                if (e instanceof RuntimeException excepcion) {
+                    throw excepcion;
+                }
+
+                throw new DatosException("No se pudo registrar el pago de la multa.", e);
+            }
+        } 
+        catch (SQLException e) {
+            throw new DatosException("Error de base de datos al registrar el pago de la multa.", e);
+        }
     }
     
     private void validarTexto(String valor, String campo) {

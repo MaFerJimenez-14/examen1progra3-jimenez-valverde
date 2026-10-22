@@ -1,25 +1,35 @@
 package cr.ac.una;
 
 import cr.ac.una.config.ProveedorConexion;
+import cr.ac.una.exception.DatosException;
+
 import cr.ac.una.exception.PrestamoNoActivoException;
+import cr.ac.una.exception.MultaPendienteException;
+
 import cr.ac.una.model.Ejemplar;
 import cr.ac.una.model.EstadoEjemplar;
 import cr.ac.una.model.EstadoPrestamo;
 import cr.ac.una.model.Libro;
 import cr.ac.una.model.Prestamo;
 import cr.ac.una.model.Usuario;
+
 import cr.ac.una.repository.EjemplarRepository;
 import cr.ac.una.repository.PrestamoRepository;
 import cr.ac.una.repository.UsuarioRepository;
+
 import cr.ac.una.service.PoliticaPrestamo;
 import cr.ac.una.service.PrestamoService;
 
 import java.lang.reflect.Proxy;
+
 import java.math.BigDecimal;
+
 import java.sql.Connection;
+
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -115,6 +125,19 @@ class PrestamoServiceMultaTest {
         assertEquals(0, politica.calcularMulta(7).compareTo(new BigDecimal("1400")));
     }
 
+    @Test
+    void pagarMultaPendiente_registraPagoCorrectamente() {
+        prestamos.marcarMultaPendiente(1, new BigDecimal("200"));
+
+        PrestamoService servicio = servicioConFecha(FECHA_LIMITE.plusDays(1));
+
+        servicio.pagarMulta(1);
+
+        Prestamo actualizado = prestamos.buscarPorId(1).orElseThrow();
+
+        assertTrue(actualizado.isMultaPagada());
+    }
+    
     // -----------------------------------------------------------------
     // Pruebas de rechazo
     // -----------------------------------------------------------------
@@ -138,7 +161,43 @@ class PrestamoServiceMultaTest {
 
         assertFalse(prestamo.tieneMultaPendiente());
     }
+    
+    @Test
+    void noPermitePrestarSiElUsuarioTieneMultaPendiente() {
+        // Preparar un usuario con una multa pendiente.
+        Prestamo prestamo = prestamos.buscarPorId(1).orElseThrow();
+        Usuario usuario = prestamo.getUsuario();
 
+        prestamos.marcarMultaPendiente(1, new BigDecimal("200"));
+
+        Clock reloj = Clock.fixed(
+                FECHA_LIMITE.plusDays(1).atStartOfDay(ZONA).toInstant(),
+                ZONA);
+
+        PrestamoService servicio = new PrestamoService(
+                new UsuarioRepositoryVacio(usuario),
+                ejemplares,
+                prestamos,
+                conexionFalsa(),
+                PoliticaPrestamo.POR_DEFECTO,
+                reloj);
+
+        assertThrows(MultaPendienteException.class, 
+                () -> servicio.prestar(usuario.getIdentificacion(), "EJ-001"));
+    }
+
+    @Test
+    void noPermitePagarDosVecesLaMismaMulta() {
+        prestamos.marcarMultaPendiente(1, new BigDecimal("200"));
+
+        PrestamoService servicio = servicioConFecha(FECHA_LIMITE.plusDays(1));
+
+        servicio.pagarMulta(1);
+
+        assertThrows(cr.ac.una.exception.ValidacionException.class, () -> servicio.pagarMulta(1)
+        );
+    }
+    
     // -----------------------------------------------------------------
     // Dobles de prueba (en memoria)
     // -----------------------------------------------------------------
@@ -160,6 +219,12 @@ class PrestamoServiceMultaTest {
             datos.put(prestamo.getId(), prestamo);
         }
 
+        void marcarMultaPendiente(int id, BigDecimal multa) {
+            Prestamo prestamo = datos.get(id);
+            prestamo.setMulta(multa);
+            prestamo.setMultaPagada(false);
+        }
+        
         BigDecimal multaGuardada(int id) {
             return datos.get(id).getMulta();
         }
@@ -213,6 +278,33 @@ class PrestamoServiceMultaTest {
         public boolean tieneAtrasados(String identificacionUsuario, LocalDate hoy) {
             return false;
         }
+
+        @Override
+        public boolean tieneMultasPendientes(String identificacionUsuario) {
+            return datos.values().stream()
+                    .anyMatch(p -> p.getUsuario().getIdentificacion()
+                            .equals(identificacionUsuario)
+                            && p.getMulta().compareTo(BigDecimal.ZERO) > 0 
+                            && !p.isMultaPagada());
+        }
+
+        @Override
+        public List<Prestamo> listarMultasPendientes() {
+            return datos.values().stream()
+                    .filter(p -> p.getMulta().compareTo(BigDecimal.ZERO) > 0)
+                    .filter(p -> !p.isMultaPagada())
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        
+        @Override
+        public void registrarPagoMulta(Connection conexion, int idPrestamo) {
+            Prestamo prestamo = datos.get(idPrestamo);
+
+            if (prestamo == null || prestamo.getMulta().compareTo(BigDecimal.ZERO) <= 0 || prestamo.isMultaPagada()) {
+                throw new DatosException("No existe una multa pendiente para ese préstamo.");
+            }
+            prestamo.setMultaPagada(true);
+        }
     }
 
     private static class EjemplarRepositoryEnMemoria implements EjemplarRepository {
@@ -262,8 +354,15 @@ class PrestamoServiceMultaTest {
 
     /** La devolución no consulta usuarios. */
     private static class UsuarioRepositoryVacio implements UsuarioRepository {
+        private final Usuario usuario;
+        UsuarioRepositoryVacio() { this.usuario = null; }
+        UsuarioRepositoryVacio(Usuario usuario) { this.usuario = usuario; }
+        
         @Override public void insertar(Usuario usuario) { }
-        @Override public Optional<Usuario> buscarPorId(String id) { return Optional.empty(); }
+        @Override public Optional<Usuario> buscarPorId(String id) { 
+            if (usuario != null && usuario.getIdentificacion().equals(id)) { return Optional.of(usuario); }
+            return Optional.empty(); 
+        }
         @Override public Optional<Usuario> buscarPorCorreo(String correo) { return Optional.empty(); }
         @Override public List<Usuario> listar() { return new ArrayList<>(); }
         @Override public void actualizar(Usuario usuario) { }

@@ -50,7 +50,16 @@ public class PrestamoRepositoryJDBC implements PrestamoRepository {
     private static final String CONTAR_ACTIVOS = "SELECT COUNT(*) FROM prestamo " + "WHERE usuario_id = ? AND estado = ?";
 
     private static final String TIENE_ATRASADOS = "SELECT COUNT(*) FROM prestamo " + "WHERE usuario_id = ? AND estado = ? AND fecha_limite < ?";
-
+    
+    private static final String TIENE_MULTAS_PENDIENTES = "SELECT COUNT(*) FROM prestamo " + "WHERE usuario_id = ? " + "AND multa > 0 " + "AND multa_pagada = FALSE";
+    
+    private static final String LISTAR_MULTAS_PENDIENTES = "SELECT p.id, p.usuario_id, p.ejemplar_codigo, " + "p.fecha_prestamo, p.fecha_limite, p.fecha_devolucion, "
+            + "p.estado, p.multa, p.multa_pagada, " + "u.identificacion, u.nombre, u.correo, u.activo, " + "l.isbn, l.titulo, l.autor, l.anio, "
+            + "e.codigo, e.estado AS estado_ejemplar " + "FROM prestamo p " + "JOIN usuario u ON p.usuario_id = u.identificacion " 
+            + "JOIN ejemplar e ON p.ejemplar_codigo = e.codigo " + "JOIN libro l ON e.libro_isbn = l.isbn " + "WHERE p.multa > 0 AND p.multa_pagada = FALSE " + "ORDER BY u.nombre";
+    
+    private static final String REGISTRAR_PAGO_MULTA = "UPDATE prestamo " + "SET multa_pagada = TRUE " + "WHERE id = ? " + "AND multa > 0 " + "AND multa_pagada = FALSE";
+    
     @Override
     public int insertar(Connection conexion, Prestamo prestamo) {
         try (PreparedStatement ps = conexion.prepareStatement(INSERTAR, Statement.RETURN_GENERATED_KEYS)) {
@@ -183,7 +192,7 @@ public class PrestamoRepositoryJDBC implements PrestamoRepository {
     @Override
     public boolean tieneAtrasados(String identificacionUsuario, LocalDate hoy) {
         try (Connection conexion = ConexionBD.obtenerConexion();
-            PreparedStatement ps = conexion.prepareStatement(TIENE_ATRASADOS)) {
+                PreparedStatement ps = conexion.prepareStatement(TIENE_ATRASADOS)) {
             
             ps.setString(1, identificacionUsuario);
             ps.setString(2, EstadoPrestamo.ACTIVO.name());
@@ -198,6 +207,57 @@ public class PrestamoRepositoryJDBC implements PrestamoRepository {
         }
     }
 
+    @Override
+    public boolean tieneMultasPendientes(String identificacionUsuario) {
+        try (Connection conexion = ConexionBD.obtenerConexion(); 
+                PreparedStatement ps = conexion.prepareStatement(TIENE_MULTAS_PENDIENTES)) {
+
+            ps.setString(1, identificacionUsuario);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            throw new DatosException("Error al comprobar las multas pendientes del usuario.", e);
+        }
+    }
+    
+    @Override
+    public List<Prestamo> listarMultasPendientes() {
+        List<Prestamo> prestamos = new ArrayList<>();
+
+        try (Connection conexion = ConexionBD.obtenerConexion(); 
+                PreparedStatement ps = conexion.prepareStatement(LISTAR_MULTAS_PENDIENTES); 
+                ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                prestamos.add(mapearPrestamo(rs));
+            }
+            return prestamos;
+        } 
+        catch (SQLException e) {
+            throw new DatosException("Error al consultar los préstamos con multas pendientes.", e);
+        }
+    }
+    
+    @Override
+    public void registrarPagoMulta(Connection conexion, int idPrestamo) {
+        try (PreparedStatement ps = conexion.prepareStatement(REGISTRAR_PAGO_MULTA)) {
+
+            ps.setInt(1, idPrestamo);
+
+            int filasActualizadas = ps.executeUpdate();
+
+            if (filasActualizadas == 0) {
+                throw new DatosException("No se pudo registrar el pago: el préstamo no existe, "
+                        + "no tiene una multa pendiente o ya fue pagada.");
+            }
+
+        } catch (SQLException e) {
+            throw new DatosException("Error al registrar el pago de la multa.", e);
+        }
+    }
+    
     private Prestamo mapearPrestamo(ResultSet rs) throws SQLException {
         Usuario usuario = new Usuario(
                 rs.getString("identificacion"),

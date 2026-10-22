@@ -1,4 +1,3 @@
-
 package cr.ac.una.app;
 
 import cr.ac.una.config.ConexionBD;
@@ -112,12 +111,14 @@ private static void mostrarMenu() {
         System.out.println("  10. Registrar devolución");
         System.out.println("  11. Listar préstamos activos de un usuario");
         System.out.println("  12. Reporte de préstamos atrasados");
+        System.out.println("  13. Consultar multas pendientes");
+        System.out.println("  14. Registrar pago de multa");
 
         Consola.separador();
         System.out.println("  ADMINISTRACIÓN DEL CATÁLOGO");
-        System.out.println("  13. Registrar libro");
-        System.out.println("  14. Registrar ejemplar");
-        System.out.println("  15. Cambiar estado de ejemplar");
+        System.out.println("  15. Registrar libro");
+        System.out.println("  16. Registrar ejemplar");
+        System.out.println("  17. Cambiar estado de ejemplar");
 
         Consola.separador();
         System.out.println("  0.  Salir");
@@ -139,9 +140,11 @@ private static void mostrarMenu() {
                 case 10 -> registrarDevolucion();
                 case 11 -> listarPrestamosActivos();
                 case 12 -> reporteAtrasados();
-                case 13 -> registrarLibro();
-                case 14 -> registrarEjemplar();
-                case 15 -> cambiarEstadoEjemplar();
+                case 13 -> reporteMultasPendientes();
+                case 14 -> pagarMulta();
+                case 15 -> registrarLibro();
+                case 16 -> registrarEjemplar();
+                case 17 -> cambiarEstadoEjemplar();
                 case 0 -> {
                     Consola.titulo("CIERRE DEL SISTEMA");
                     Consola.info("Gracias por utilizar Gestión de Biblioteca.");
@@ -488,5 +491,27 @@ private static void mostrarMenu() {
                 },
                 filas,
                 new int[]{5, 20, 12, 12, 13, 13, 10});
+    }
+    
+    private static void reporteMultasPendientes() {
+        Consola.titulo("REPORTE DE MULTAS PENDIENTES");
+
+        List<Prestamo> prestamos = prestamoController.reporteMultasPendientes();
+
+        if (prestamos.isEmpty()) {
+            Consola.exito("No hay multas pendientes de pago.");
+            return;
+        }
+
+        mostrarTablaPrestamos(prestamos);
+        Consola.info("Total de préstamos con multas pendientes: " + prestamos.size());
+    }
+    
+    private static void pagarMulta() {
+        Consola.titulo("REGISTRAR PAGO DE MULTA");
+
+        int idPrestamo = Consola.leerEntero("ID del préstamo cuya multa desea pagar: ");
+
+        Consola.mostrarMensaje(prestamoController.pagarMulta(idPrestamo));
     }
 }
