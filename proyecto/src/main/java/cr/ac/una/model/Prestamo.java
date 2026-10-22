@@ -1,5 +1,6 @@
 package cr.ac.una.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
@@ -16,6 +17,8 @@ public class Prestamo {
     private LocalDate fechaLimite;
     private LocalDate fechaDevolucion; // null mientras el préstamo esté ACTIVO
     private EstadoPrestamo estado;
+    private BigDecimal multa = BigDecimal.ZERO; // monto generado al devolver con atraso (RN-N1)
+    private boolean multaPagada;                 // true cuando se registra el pago (RN-N3)
 
     public Prestamo() {
     }
@@ -29,6 +32,15 @@ public class Prestamo {
         this.fechaLimite = fechaLimite;
         this.fechaDevolucion = fechaDevolucion;
         this.estado = estado;
+    }
+
+    /** Constructor completo, incluida la multa (usado al leer desde la base de datos). */
+    public Prestamo(int id, Usuario usuario, Ejemplar ejemplar, LocalDate fechaPrestamo,
+                    LocalDate fechaLimite, LocalDate fechaDevolucion, EstadoPrestamo estado,
+                    BigDecimal multa, boolean multaPagada) {
+        this(id, usuario, ejemplar, fechaPrestamo, fechaLimite, fechaDevolucion, estado);
+        setMulta(multa);
+        this.multaPagada = multaPagada;
     }
 
     /** Constructor para un préstamo nuevo (el id lo asigna la base de datos). */
@@ -45,6 +57,11 @@ public class Prestamo {
     public long diasAtraso(LocalDate fecha) {
         long dias = ChronoUnit.DAYS.between(fechaLimite, fecha);
         return Math.max(dias, 0);
+    }
+
+    /** Hay multa pendiente si el monto es mayor que cero y todavía no se pagó (RN-N2). */
+    public boolean tieneMultaPendiente() {
+        return multa.signum() > 0 && !multaPagada;
     }
 
     public int getId() {
@@ -103,6 +120,23 @@ public class Prestamo {
         this.estado = estado;
     }
 
+    public BigDecimal getMulta() {
+        return multa;
+    }
+
+    /** Un valor nulo se toma como 0, igual que el DEFAULT de la columna. */
+    public void setMulta(BigDecimal multa) {
+        this.multa = multa == null ? BigDecimal.ZERO : multa;
+    }
+
+    public boolean isMultaPagada() {
+        return multaPagada;
+    }
+
+    public void setMultaPagada(boolean multaPagada) {
+        this.multaPagada = multaPagada;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -123,6 +157,8 @@ public class Prestamo {
                 + ", fechaPrestamo=" + fechaPrestamo
                 + ", fechaLimite=" + fechaLimite
                 + ", fechaDevolucion=" + fechaDevolucion
-                + ", estado=" + estado + "}";
+                + ", estado=" + estado
+                + ", multa=" + multa
+                + ", multaPagada=" + multaPagada + "}";
     }
 }
