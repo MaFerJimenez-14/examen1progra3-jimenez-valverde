@@ -12,7 +12,7 @@ Las pruebas automatizadas de `PrestamoServiceMultaTest` prueban `PrestamoService
 ## Casos de prueba
 
 | ID | Tipo (éxito / error) | Descripción | Datos de entrada | Resultado esperado | Resultado obtenido | Estado |
-|---|---|---|---|---|---|---|
+|----|----|----|----|----|----|----|
 | P-01 | Éxito | Devolver a tiempo no genera multa (RN-N1) | Préstamo con fecha límite 10/10/2026, devuelto el 10/10/2026 | Multa ₡0, sin multa pendiente | Multa ₡0 guardada | ✅ |
 | P-02 | Éxito | Un día de atraso genera ₡200 (RN-N1) | Devuelto el 11/10/2026 | Multa ₡200, pendiente de pago | Multa ₡200, pendiente | ✅ |
 | P-03 | Éxito | Cinco días de atraso: la multa se calcula y se guarda en el préstamo (RN-N1) | Devuelto el 15/10/2026 | Multa ₡1000 guardada, `multaPagada = false`, préstamo DEVUELTO, ejemplar DISPONIBLE | Coincide | ✅ |
@@ -21,11 +21,10 @@ Las pruebas automatizadas de `PrestamoServiceMultaTest` prueban `PrestamoService
 | P-06 | Éxito | Una multa pagada no queda pendiente | Multa ₡600, `multaPagada = true` | `tieneMultaPendiente()` = false | false | ✅ |
 | P-07 | Éxito (manual, MySQL) | La multa se calcula y se guarda en la base de datos (RN-N1) | Opción 10, préstamo ID 5 (fecha límite 19/10/2026), devuelto el 21/10/2026 | Mensaje con 2 días de atraso y multa de ₡400; en `prestamo`: `multa = 400.00`, `multa_pagada = 0`, estado DEVUELTO | "Días de atraso: 2. Multa generada: ₡400.00 (pendiente de pago)"; fila 5 con `multa = 400.00`, `multa_pagada = 0`, DEVUELTO | ✅ |
 | P-08 | Error (manual, MySQL) | Usuario con préstamo atrasado no puede pedir otro (RN-02) — operación de negocio rechazada | Opción 9, usuario `202220222`, ejemplar `EJ-010` | Rechazo: "El usuario tiene préstamos atrasados..." | "No se pudo registrar el préstamo: El usuario tiene préstamos atrasados y no puede solicitar otro préstamo." | ✅ |
-| P-09 | | | | | | |
-| P-10 | | | | | | |
+| P-09 | Error (manual, MySQL) | Usuario con multa pendiente no puede solicitar un nuevo préstamo (RN-N2) | Opción 9, usuario `202220222`, ejemplar `Ej-002`; multa pendiente de ₡400 en préstamo ID 5 | Se rechaza el préstamo y se informa que el usuario tiene multas pendientes | «El usuario tiene multas pendientes de pago y no puede solicitar otro préstamo.» | ✅ |
+| P-10 | Éxito (manual, MySQL) | Registrar el pago de una multa pendiente (RN-N3) | Opción 14, préstamo ID 5, multa de ₡400 pendiente | Mensaje de pago registrado correctamente; `multa_pagada = 1` en MySQL | Pago registrado correctamente; préstamo ID 5 con `multa_pagada = 1` verificado en MySQL | ✅ |
 
-> P-01 a P-06: `PrestamoServiceMultaTest` (JUnit). P-07 y P-08: manuales sobre MySQL.
-> P-09 en adelante: bloqueo por multa pendiente (RN-N2), pago de multa (RN-N3) y consulta de usuarios con deudas.
+> P-01 a P-06: `PrestamoServiceMultaTest` (JUnit). P-07 y P-08: pruebas manuales sobre MySQL. P-09 y P-10: pruebas manuales del bloqueo por multa pendiente (RN-N2) y del pago de multa (RN-N3).
 
 ## Evidencias
 
@@ -47,10 +46,26 @@ Registro en la tabla `prestamo` después de la devolución:
 
 ![Rechazo RN-02](img/rechazo_rn02_atraso.png)
 
+### P-09: rechazo por multa pendiente (RN-N2)
+
+Intento de registrar un préstamo para el usuario `202220222`, con una multa pendiente de ₡400 en el préstamo ID 5.
+
+![Rechazo por multa pendiente](img/p09_bloqueo_multa_pendiente.png)
+
+### P-10: pago de multa registrado en MySQL (RN-N3)
+
+Se registró el pago de la multa de ₡400 correspondiente al préstamo ID 5.
+
+**Resultado en la aplicación:**
+
+![Pago de multa registrado](img/p10_pago_multa_app.png)
+
+**Verificación en MySQL:**
+
+![Pago de multa en la base de datos](img/p10_pago_multa_bd.png)
+
 ## Resumen
 
 | Total | Exitosas | Fallidas |
-|---:|---:|---:|
-| 8 | 8 | 0 |
-
-> Actualizar al agregar las pruebas P-09 en adelante.
+|------:|---------:|---------:|
+|    10 |       10 |        0 |
