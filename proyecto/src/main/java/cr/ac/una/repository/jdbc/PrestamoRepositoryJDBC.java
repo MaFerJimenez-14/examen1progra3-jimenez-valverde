@@ -10,6 +10,8 @@ import cr.ac.una.model.Prestamo;
 import cr.ac.una.model.Usuario;
 import cr.ac.una.repository.PrestamoRepository;
 
+import java.math.BigDecimal;
+
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -28,19 +30,19 @@ public class PrestamoRepositoryJDBC implements PrestamoRepository {
     private static final String INSERTAR = "INSERT INTO prestamo " + "(usuario_id, ejemplar_codigo, fecha_prestamo, fecha_limite, " 
             + "fecha_devolucion, estado) VALUES (?, ?, ?, ?, ?, ?)";
 
-    private static final String BUSCAR_POR_ID = "SELECT p.id, p.fecha_prestamo, p.fecha_limite, " + "p.fecha_devolucion, p.estado, " 
+    private static final String BUSCAR_POR_ID = "SELECT p.id, p.fecha_prestamo, p.fecha_limite, " + "p.fecha_devolucion, p.estado, p.multa, p.multa_pagada, " 
             + "u.identificacion, u.nombre, u.correo, u.activo, " + "e.codigo, e.estado AS estado_ejemplar, " + "l.isbn, l.titulo, l.autor, l.anio " 
             + "FROM prestamo p " + "INNER JOIN usuario u ON p.usuario_id = u.identificacion " + "INNER JOIN ejemplar e ON p.ejemplar_codigo = e.codigo " 
             + "INNER JOIN libro l ON e.libro_isbn = l.isbn " + "WHERE p.id = ?";
 
-    private static final String REGISTRAR_DEVOLUCION = "UPDATE prestamo SET fecha_devolucion = ?, estado = ? " + "WHERE id = ? AND estado = ?";
+    private static final String REGISTRAR_DEVOLUCION = "UPDATE prestamo SET fecha_devolucion = ?, estado = ?, multa = ?, multa_pagada = FALSE " + "WHERE id = ? AND estado = ?";
 
-    private static final String LISTAR_ACTIVOS_POR_USUARIO = "SELECT p.id, p.fecha_prestamo, p.fecha_limite, " + "p.fecha_devolucion, p.estado, "
+    private static final String LISTAR_ACTIVOS_POR_USUARIO = "SELECT p.id, p.fecha_prestamo, p.fecha_limite, " + "p.fecha_devolucion, p.estado, p.multa, p.multa_pagada, "
             + "u.identificacion, u.nombre, u.correo, u.activo, " + "e.codigo, e.estado AS estado_ejemplar, " + "l.isbn, l.titulo, l.autor, l.anio "
             + "FROM prestamo p " + "INNER JOIN usuario u ON p.usuario_id = u.identificacion " + "INNER JOIN ejemplar e ON p.ejemplar_codigo = e.codigo "
             + "INNER JOIN libro l ON e.libro_isbn = l.isbn " + "WHERE p.usuario_id = ? AND p.estado = ? " + "ORDER BY p.fecha_prestamo";
 
-    private static final String LISTAR_ATRASADOS = "SELECT p.id, p.fecha_prestamo, p.fecha_limite, " + "p.fecha_devolucion, p.estado, "
+    private static final String LISTAR_ATRASADOS = "SELECT p.id, p.fecha_prestamo, p.fecha_limite, " + "p.fecha_devolucion, p.estado, p.multa, p.multa_pagada, "
             + "u.identificacion, u.nombre, u.correo, u.activo, " + "e.codigo, e.estado AS estado_ejemplar, " + "l.isbn, l.titulo, l.autor, l.anio "
             + "FROM prestamo p " + "INNER JOIN usuario u ON p.usuario_id = u.identificacion " + "INNER JOIN ejemplar e ON p.ejemplar_codigo = e.codigo "
             + "INNER JOIN libro l ON e.libro_isbn = l.isbn " + "WHERE p.estado = ? AND p.fecha_limite < ? " + "ORDER BY p.fecha_limite";
@@ -94,13 +96,14 @@ public class PrestamoRepositoryJDBC implements PrestamoRepository {
     }
 
     @Override
-    public void registrarDevolucion(Connection conexion, int id, LocalDate fechaDevolucion) {
+    public void registrarDevolucion(Connection conexion, int id, LocalDate fechaDevolucion, BigDecimal multa) {
         try (PreparedStatement ps = conexion.prepareStatement(REGISTRAR_DEVOLUCION)) {
             
             ps.setDate(1, Date.valueOf(fechaDevolucion));
             ps.setString(2, EstadoPrestamo.DEVUELTO.name());
-            ps.setInt(3, id);
-            ps.setString(4, EstadoPrestamo.ACTIVO.name());
+            ps.setBigDecimal(3, multa);
+            ps.setInt(4, id);
+            ps.setString(5, EstadoPrestamo.ACTIVO.name());
             
             int filas = ps.executeUpdate();
             
@@ -223,6 +226,8 @@ public class PrestamoRepositoryJDBC implements PrestamoRepository {
                 rs.getDate("fecha_prestamo").toLocalDate(),
                 rs.getDate("fecha_limite").toLocalDate(),
                 fechaDevolucion,
-                EstadoPrestamo.valueOf(rs.getString("estado")));
+                EstadoPrestamo.valueOf(rs.getString("estado")),
+                rs.getBigDecimal("multa"),
+                rs.getBoolean("multa_pagada"));
     }
 }

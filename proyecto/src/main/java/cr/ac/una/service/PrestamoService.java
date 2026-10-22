@@ -17,6 +17,7 @@ import cr.ac.una.model.Usuario;
 import cr.ac.una.repository.EjemplarRepository;
 import cr.ac.una.repository.PrestamoRepository;
 import cr.ac.una.repository.UsuarioRepository;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -177,14 +178,20 @@ public class PrestamoService {
 
         LocalDate fechaDevolucion = LocalDate.now(reloj);
 
+        // RN-N1: ₡200 por cada día de atraso (0 si se devuelve a tiempo).
+        long diasAtraso = prestamo.diasAtraso(fechaDevolucion);
+        BigDecimal multa = politica.calcularMulta(diasAtraso);
+
         try (Connection conexion = proveedorConexion.obtenerConexion()) {
             conexion.setAutoCommit(false);
 
             try {
+                // La multa se guarda en la misma transacción de la devolución.
                 prestamoRepository.registrarDevolucion(
                         conexion,
                         idPrestamo,
-                        fechaDevolucion);
+                        fechaDevolucion,
+                        multa);
 
                 boolean actualizado = ejemplarRepository.actualizarEstado(
                         conexion,
@@ -203,6 +210,8 @@ public class PrestamoService {
                 // Reflejar en el objeto el resultado guardado.
                 prestamo.setFechaDevolucion(fechaDevolucion);
                 prestamo.setEstado(EstadoPrestamo.DEVUELTO);
+                prestamo.setMulta(multa);
+                prestamo.setMultaPagada(false);
 
                 return prestamo;
             } 

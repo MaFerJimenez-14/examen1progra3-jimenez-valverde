@@ -51,7 +51,8 @@ public class PrestamoController {
             String mensaje = "Devolución registrada correctamente. " + "Préstamo ID: " + prestamo.getId() + ".";
 
             if (diasAtraso > 0) {
-                mensaje += " Días de atraso: " + diasAtraso + ".";
+                mensaje += " Días de atraso: " + diasAtraso + "."
+                        + " Multa generada: ₡" + prestamo.getMulta() + " (pendiente de pago).";
             } 
             else {
                 mensaje += " Sin días de atraso.";

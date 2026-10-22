@@ -2,6 +2,7 @@ package cr.ac.una.repository;
 
 import cr.ac.una.model.Prestamo;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,8 +22,8 @@ public interface PrestamoRepository {
     /** Busca el préstamo con su usuario y su ejemplar/libro (JOIN). */
     Optional<Prestamo> buscarPorId(int id);
 
-    /** Registra fecha_devolucion y cambia el estado a DEVUELTO. */
-    void registrarDevolucion(Connection conexion, int id, LocalDate fechaDevolucion);
+    /** Registra fecha_devolucion, la multa calculada (RN-N1) y cambia el estado a DEVUELTO. */
+    void registrarDevolucion(Connection conexion, int id, LocalDate fechaDevolucion, BigDecimal multa);
 
     /** Préstamos ACTIVOS de un usuario, con datos del libro (JOIN). */
     List<Prestamo> listarActivosPorUsuario(String identificacionUsuario);
